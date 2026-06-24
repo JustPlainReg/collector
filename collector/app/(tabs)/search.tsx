@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../context/theme';
+import type { ColorScheme } from '../../constants/theme';
 
 type Category = {
   id: string;
@@ -22,6 +23,9 @@ type Item = {
 
 export default function Search() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [results, setResults] = useState<Item[]>([]);
@@ -35,7 +39,6 @@ export default function Search() {
       .then(({ data }) => setCategories(data ?? []));
   }, []);
 
-  // Load first 50 items when a category is selected (and no search query)
   useEffect(() => {
     if (!selectedCategory || query.trim()) return;
 
@@ -52,7 +55,6 @@ export default function Search() {
       });
   }, [selectedCategory]);
 
-  // Debounced search — scoped to category if one is selected
   useEffect(() => {
     if (!query.trim()) {
       if (!selectedCategory) setResults([]);
@@ -95,7 +97,6 @@ export default function Search() {
 
   return (
     <View style={styles.container}>
-      {/* Category filter pill */}
       {selectedCategory && (
         <View style={styles.filterRow}>
           <View style={styles.filterPill}>
@@ -176,87 +177,62 @@ export default function Search() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: 16,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  filterPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.accentDark,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  filterPillText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  filterClear: {
-    padding: 2,
-  },
-  filterClearText: {
-    color: colors.text,
-    fontSize: 12,
-  },
-  searchInput: {
-    marginHorizontal: 16,
-    backgroundColor: colors.surface,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  sectionLabel: {
-    color: colors.subtext,
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  grid: { paddingHorizontal: 16 },
-  row: { justifyContent: 'space-between', marginBottom: 12 },
-  categoryCard: {
-    flex: 0.48,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryName: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  list: { paddingHorizontal: 16 },
-  resultRow: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  resultName: { color: colors.text, fontSize: 15, fontWeight: '500' },
-  resultMeta: { color: colors.subtext, fontSize: 13, marginTop: 3 },
-  spinner: { marginTop: 40 },
-  empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: 32 },
-  emptyText: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  emptySubtext: { color: colors.subtext, fontSize: 14, textAlign: 'center' },
-  footerHint: { color: colors.subtext, fontSize: 12, textAlign: 'center', padding: 16 },
-});
+function makeStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background, paddingTop: 16 },
+    filterRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 10 },
+    filterPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.accentDark,
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    filterPillText: { color: c.text, fontSize: 13, fontWeight: '600', marginRight: 8 },
+    filterClear: { padding: 2 },
+    filterClearText: { color: c.text, fontSize: 12 },
+    searchInput: {
+      marginHorizontal: 16,
+      backgroundColor: c.surface,
+      color: c.text,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      marginBottom: 16,
+    },
+    sectionLabel: {
+      color: c.subtext,
+      fontSize: 12,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
+    grid: { paddingHorizontal: 16 },
+    row: { justifyContent: 'space-between', marginBottom: 12 },
+    categoryCard: {
+      flex: 0.48,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 10,
+      padding: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    categoryName: { color: c.text, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+    list: { paddingHorizontal: 16 },
+    resultRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border },
+    resultName: { color: c.text, fontSize: 15, fontWeight: '500' },
+    resultMeta: { color: c.subtext, fontSize: 13, marginTop: 3 },
+    spinner: { marginTop: 40 },
+    empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: 32 },
+    emptyText: { color: c.text, fontSize: 16, fontWeight: '600', marginBottom: 8 },
+    emptySubtext: { color: c.subtext, fontSize: 14, textAlign: 'center' },
+    footerHint: { color: c.subtext, fontSize: 12, textAlign: 'center', padding: 16 },
+  });
+}

@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/auth';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../context/theme';
+import type { ColorScheme } from '../../constants/theme';
 
 type PortfolioItem = {
   id: string;
@@ -24,7 +25,9 @@ type CurrentPrice = {
 
 export default function Portfolio() {
   const { session } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
+  const styles = makeStyles(colors);
 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
@@ -43,7 +46,6 @@ export default function Portfolio() {
     const items = (portfolio as unknown as PortfolioItem[]) ?? [];
     setPortfolioItems(items);
 
-    // Fetch current prices for all owned items
     if (items.length > 0) {
       const itemIds = items.map((p) => p.items.id);
       const { data: prices } = await supabase
@@ -51,7 +53,6 @@ export default function Portfolio() {
         .select('item_id, est_value')
         .in('item_id', itemIds);
 
-      // Average est_value across variants per item
       const priceMap: Record<string, number> = {};
       const countMap: Record<string, number> = {};
       (prices as CurrentPrice[] ?? []).forEach((p) => {
@@ -67,7 +68,6 @@ export default function Portfolio() {
     setLoading(false);
   }, [session]);
 
-  // Reload whenever the tab comes into focus (e.g. after adding an item)
   useFocusEffect(
     useCallback(() => {
       loadPortfolio();
@@ -99,9 +99,7 @@ export default function Portfolio() {
 
   const renderItem = ({ item }: { item: PortfolioItem }) => {
     const estValue = currentPrices[item.items.id];
-    const gain = item.purchase_price && estValue
-      ? estValue - item.purchase_price
-      : null;
+    const gain = item.purchase_price && estValue ? estValue - item.purchase_price : null;
 
     return (
       <TouchableOpacity
@@ -110,13 +108,9 @@ export default function Portfolio() {
         onLongPress={() => handleRemove(item.id, item.items.name)}
       >
         <View style={styles.itemInfo}>
-          <Text style={styles.itemCategory}>
-            {item.items.categories?.[0]?.name ?? ''}
-          </Text>
+          <Text style={styles.itemCategory}>{item.items.categories?.[0]?.name ?? ''}</Text>
           <Text style={styles.itemName}>{item.items.name}</Text>
-          {item.items.brand && (
-            <Text style={styles.itemBrand}>{item.items.brand}</Text>
-          )}
+          {item.items.brand && <Text style={styles.itemBrand}>{item.items.brand}</Text>}
         </View>
         <View style={styles.itemPricing}>
           <Text style={styles.itemValue}>
@@ -142,7 +136,6 @@ export default function Portfolio() {
 
   return (
     <View style={styles.container}>
-      {/* Total Value Hero */}
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>PORTFOLIO VALUE</Text>
         <Text style={styles.heroValue}>
@@ -169,52 +162,38 @@ export default function Portfolio() {
           contentContainerStyle={styles.list}
         />
       )}
-
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  hero: {
-    padding: 24,
-    paddingTop: 32,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  heroLabel: {
-    color: colors.subtext,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-    marginBottom: 6,
-  },
-  heroValue: {
-    color: colors.text,
-    fontSize: 40,
-    fontWeight: 'bold',
-  },
-  list: { paddingHorizontal: 16, paddingTop: 8 },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  itemInfo: { flex: 1, marginRight: 12 },
-  itemCategory: { color: colors.accent, fontSize: 11, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
-  itemName: { color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  itemBrand: { color: colors.subtext, fontSize: 13 },
-  itemPricing: { alignItems: 'flex-end' },
-  itemValue: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  itemGain: { fontSize: 13, marginTop: 2 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { color: colors.text, fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  emptySubtext: { color: colors.subtext, fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  emptyButton: { backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 14 },
-  emptyButtonText: { color: colors.background, fontSize: 15, fontWeight: '700' },
-});
+function makeStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+    hero: { padding: 24, paddingTop: 32, borderBottomWidth: 1, borderBottomColor: c.border },
+    heroLabel: { color: c.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1.5, marginBottom: 6 },
+    heroValue: { color: c.text, fontSize: 40, fontWeight: 'bold' },
+    list: { paddingHorizontal: 16, paddingTop: 8 },
+    itemRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    itemInfo: { flex: 1, marginRight: 12 },
+    itemCategory: { color: c.accent, fontSize: 11, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
+    itemName: { color: c.text, fontSize: 15, fontWeight: '600', marginBottom: 2 },
+    itemBrand: { color: c.subtext, fontSize: 13 },
+    itemPricing: { alignItems: 'flex-end' },
+    itemValue: { color: c.text, fontSize: 16, fontWeight: '700' },
+    itemGain: { fontSize: 13, marginTop: 2 },
+    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+    emptyIcon: { fontSize: 48, marginBottom: 16 },
+    emptyText: { color: c.text, fontSize: 18, fontWeight: '600', marginBottom: 8 },
+    emptySubtext: { color: c.subtext, fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+    emptyButton: { backgroundColor: c.accent, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 14 },
+    emptyButtonText: { color: c.background, fontSize: 15, fontWeight: '700' },
+  });
+}

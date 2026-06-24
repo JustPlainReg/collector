@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../context/theme';
+import type { ColorScheme } from '../../constants/theme';
 
 export default function ForgotPassword() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -66,62 +70,26 @@ export default function ForgotPassword() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.accent,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.subtext,
-    marginBottom: 32,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: colors.surface,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  button: {
-    width: '100%',
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: {
-    color: colors.background,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  cancelButton: {
-    marginTop: 20,
-    padding: 12,
-  },
-  cancelText: {
-    color: colors.subtext,
-    fontSize: 14,
-  },
-  error: {
-    color: colors.negative,
-    fontSize: 14,
-    marginBottom: 8,
-  },
-});
+function makeStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background, padding: 24 },
+    title: { fontSize: 28, fontWeight: 'bold', color: c.accent, marginBottom: 8 },
+    subtitle: { fontSize: 14, color: c.subtext, marginBottom: 32, textAlign: 'center', lineHeight: 20 },
+    input: {
+      width: '100%',
+      backgroundColor: c.surface,
+      color: c.text,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 8,
+      padding: 14,
+      marginBottom: 12,
+      fontSize: 16,
+    },
+    button: { width: '100%', backgroundColor: c.accent, borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8 },
+    buttonText: { color: c.background, fontSize: 16, fontWeight: '700' },
+    cancelButton: { marginTop: 20, padding: 12 },
+    cancelText: { color: c.subtext, fontSize: 14 },
+    error: { color: c.negative, fontSize: 14, marginBottom: 8 },
+  });
+}

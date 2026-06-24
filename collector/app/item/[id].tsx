@@ -7,7 +7,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { LineChart } from 'react-native-chart-kit';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/auth';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../context/theme';
+import type { ColorScheme } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -45,6 +46,8 @@ function variantLabel(v: Variant): string {
 export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
 
   const [item, setItem] = useState<Item | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -59,7 +62,6 @@ export default function ItemDetail() {
   const [purchasePrice, setPurchasePrice] = useState('');
   const [adding, setAdding] = useState(false);
 
-  // Load item + variants once
   useEffect(() => {
     async function load() {
       const [itemRes, variantRes] = await Promise.all([
@@ -83,7 +85,6 @@ export default function ItemDetail() {
     load();
   }, [id]);
 
-  // Reload prices + ownership whenever variant selection changes
   useEffect(() => {
     if (loading) return;
     loadPrices();
@@ -192,7 +193,6 @@ export default function ItemDetail() {
   return (
     <>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        {/* Header */}
         <View style={styles.header}>
           {item.image_url && (
             <Image source={{ uri: item.image_url }} style={styles.itemImage} resizeMode="contain" />
@@ -202,7 +202,6 @@ export default function ItemDetail() {
           {item.brand && <Text style={styles.brand}>{item.brand}</Text>}
         </View>
 
-        {/* Variant Selector */}
         {variants.length > 0 && (
           <ScrollView
             horizontal
@@ -234,7 +233,6 @@ export default function ItemDetail() {
           </ScrollView>
         )}
 
-        {/* Price Summary */}
         {priceLoading ? (
           <View style={styles.summaryCard}>
             <ActivityIndicator color={colors.accent} />
@@ -266,7 +264,6 @@ export default function ItemDetail() {
           </View>
         )}
 
-        {/* Price Chart */}
         {chartData.length > 1 && hasRealHistory && (
           <View style={styles.chartSection}>
             <Text style={styles.sectionTitle}>Price History</Text>
@@ -292,7 +289,10 @@ export default function ItemDetail() {
           </View>
         )}
 
-        <TouchableOpacity style={[styles.addButton, alreadyOwned && styles.addButtonOwned]} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity
+          style={[styles.addButton, alreadyOwned && styles.addButtonOwned]}
+          onPress={() => setModalVisible(true)}
+        >
           <Text style={styles.addButtonText}>
             {alreadyOwned
               ? `✓ In Portfolio · Add Another${selectedVariant ? ` ${variantLabel(selectedVariant)}` : ''}`
@@ -301,7 +301,6 @@ export default function ItemDetail() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Add to Portfolio Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
@@ -334,44 +333,46 @@ export default function ItemDetail() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 16, paddingBottom: 40 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  errorText: { color: colors.subtext, fontSize: 16 },
-  header: { marginBottom: 20, alignItems: 'center' },
-  itemImage: { width: 220, height: 300, marginBottom: 16 },
-  category: { color: colors.accent, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  name: { color: colors.text, fontSize: 22, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
-  brand: { color: colors.subtext, fontSize: 14 },
-  variantRow: { flexDirection: 'row', gap: 8, paddingBottom: 16 },
-  variantPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-  variantPillActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  variantPillText: { color: colors.subtext, fontSize: 13, fontWeight: '600' },
-  variantPillTextActive: { color: colors.background },
-  summaryCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 16, marginBottom: 24, minHeight: 80, justifyContent: 'center' },
-  summaryMain: { marginBottom: 16 },
-  estLabel: { color: colors.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 4 },
-  estValue: { color: colors.accent, fontSize: 36, fontWeight: 'bold' },
-  summaryStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  stat: { alignItems: 'center' },
-  statLabel: { color: colors.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 4 },
-  statValue: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  noData: { color: colors.subtext, fontSize: 14, textAlign: 'center', paddingVertical: 8 },
-  chartSection: { marginBottom: 24 },
-  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 12 },
-  chart: { borderRadius: 12 },
-  addButton: { backgroundColor: colors.accent, borderRadius: 10, padding: 16, alignItems: 'center' },
-  addButtonOwned: { backgroundColor: colors.accentDark },
-  addButtonText: { color: colors.background, fontSize: 16, fontWeight: '700' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
-  modalTitle: { color: colors.text, fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
-  modalSubtitle: { color: colors.subtext, fontSize: 14, marginBottom: 24 },
-  inputLabel: { color: colors.subtext, fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
-  modalInput: { backgroundColor: colors.background, color: colors.text, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 14, fontSize: 16, marginBottom: 16 },
-  confirmButton: { backgroundColor: colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginBottom: 12 },
-  confirmButtonText: { color: colors.background, fontSize: 16, fontWeight: '700' },
-  cancelButton: { alignItems: 'center', padding: 12 },
-  cancelButtonText: { color: colors.subtext, fontSize: 15 },
-});
+function makeStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    content: { padding: 16, paddingBottom: 40 },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
+    errorText: { color: c.subtext, fontSize: 16 },
+    header: { marginBottom: 20, alignItems: 'center' },
+    itemImage: { width: 220, height: 300, marginBottom: 16 },
+    category: { color: c.accent, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
+    name: { color: c.text, fontSize: 22, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
+    brand: { color: c.subtext, fontSize: 14 },
+    variantRow: { flexDirection: 'row', gap: 8, paddingBottom: 16 },
+    variantPill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: c.border, backgroundColor: c.surface },
+    variantPillActive: { backgroundColor: c.accent, borderColor: c.accent },
+    variantPillText: { color: c.subtext, fontSize: 13, fontWeight: '600' },
+    variantPillTextActive: { color: c.background },
+    summaryCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 12, padding: 16, marginBottom: 24, minHeight: 80, justifyContent: 'center' },
+    summaryMain: { marginBottom: 16 },
+    estLabel: { color: c.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 4 },
+    estValue: { color: c.accent, fontSize: 36, fontWeight: 'bold' },
+    summaryStats: { flexDirection: 'row', justifyContent: 'space-between' },
+    stat: { alignItems: 'center' },
+    statLabel: { color: c.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 4 },
+    statValue: { color: c.text, fontSize: 16, fontWeight: '600' },
+    noData: { color: c.subtext, fontSize: 14, textAlign: 'center', paddingVertical: 8 },
+    chartSection: { marginBottom: 24 },
+    sectionTitle: { color: c.text, fontSize: 16, fontWeight: '600', marginBottom: 12 },
+    chart: { borderRadius: 12 },
+    addButton: { backgroundColor: c.accent, borderRadius: 10, padding: 16, alignItems: 'center' },
+    addButtonOwned: { backgroundColor: c.accentDark },
+    addButtonText: { color: c.background, fontSize: 16, fontWeight: '700' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+    modalSheet: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
+    modalTitle: { color: c.text, fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+    modalSubtitle: { color: c.subtext, fontSize: 14, marginBottom: 24 },
+    inputLabel: { color: c.subtext, fontSize: 12, fontWeight: '600', letterSpacing: 1, marginBottom: 8 },
+    modalInput: { backgroundColor: c.background, color: c.text, borderWidth: 1, borderColor: c.border, borderRadius: 8, padding: 14, fontSize: 16, marginBottom: 16 },
+    confirmButton: { backgroundColor: c.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginBottom: 12 },
+    confirmButtonText: { color: c.background, fontSize: 16, fontWeight: '700' },
+    cancelButton: { alignItems: 'center', padding: 12 },
+    cancelButtonText: { color: c.subtext, fontSize: 15 },
+  });
+}
