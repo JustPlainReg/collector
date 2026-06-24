@@ -1,0 +1,28 @@
+# Environment variables - never commit these
+**/.env
+**/.env.local
+
+# Dependencies
+node_modules/
+.expo/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.claude/
+
+# Build outputs
+dist/
+build/
+android/
+ios/
