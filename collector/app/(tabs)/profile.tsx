@@ -50,7 +50,7 @@ export default function Profile() {
         <Text style={styles.sectionTitle}>ABOUT</Text>
         <View style={styles.card}>
           <Row label="App" value="Collector" />
-          <Row label="Version" value="1.0.0" last />
+          <Row label="Version" value="1.0.1" last />
         </View>
       </View>
 
