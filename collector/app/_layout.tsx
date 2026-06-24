@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/auth';
 import { ThemeProvider, useTheme } from '../context/theme';
+import { CurrencyProvider } from '../context/currency';
 
 function RootLayoutNav() {
   const { session, loading } = useAuth();
@@ -41,9 +42,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
+      <CurrencyProvider>
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </CurrencyProvider>
     </ThemeProvider>
   );
 }

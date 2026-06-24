@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/auth';
 import { useTheme } from '../../context/theme';
+import { useCurrency } from '../../context/currency';
 import type { ColorScheme } from '../../constants/theme';
 
 type PortfolioItem = {
@@ -26,6 +27,7 @@ type CurrentPrice = {
 export default function Portfolio() {
   const { session } = useAuth();
   const { colors } = useTheme();
+  const { formatPrice } = useCurrency();
   const router = useRouter();
   const styles = makeStyles(colors);
 
@@ -113,12 +115,10 @@ export default function Portfolio() {
           {item.items.brand && <Text style={styles.itemBrand}>{item.items.brand}</Text>}
         </View>
         <View style={styles.itemPricing}>
-          <Text style={styles.itemValue}>
-            {estValue ? `$${estValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-          </Text>
+          <Text style={styles.itemValue}>{formatPrice(estValue)}</Text>
           {gain !== null && (
             <Text style={[styles.itemGain, { color: gain >= 0 ? colors.positive : colors.negative }]}>
-              {gain >= 0 ? '+' : ''}${Math.abs(gain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {gain >= 0 ? '+' : ''}{formatPrice(Math.abs(gain))}
             </Text>
           )}
         </View>
@@ -138,9 +138,7 @@ export default function Portfolio() {
     <View style={styles.container}>
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>PORTFOLIO VALUE</Text>
-        <Text style={styles.heroValue}>
-          ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </Text>
+        <Text style={styles.heroValue}>{formatPrice(totalValue)}</Text>
       </View>
 
       {portfolioItems.length === 0 ? (

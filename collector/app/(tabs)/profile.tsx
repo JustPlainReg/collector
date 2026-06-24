@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../../context/auth';
 import { useTheme, ThemePreference } from '../../context/theme';
+import { useCurrency, Currency } from '../../context/currency';
 import type { ColorScheme } from '../../constants/theme';
 
 export default function Profile() {
   const { session, signOut } = useAuth();
   const { colors, preference, setPreference } = useTheme();
+  const { currency, setCurrency } = useCurrency();
   const styles = makeStyles(colors);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -35,6 +37,12 @@ export default function Profile() {
     { value: 'dark', label: 'Dark' },
   ];
 
+  const currencyOptions: { value: Currency; label: string }[] = [
+    { value: 'USD', label: 'USD $' },
+    { value: 'EUR', label: 'EUR €' },
+    { value: 'GBP', label: 'GBP £' },
+  ];
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Avatar + email */}
@@ -50,7 +58,7 @@ export default function Profile() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>APPEARANCE</Text>
         <View style={styles.card}>
-          <View style={styles.themeRow}>
+          <View style={[styles.themeRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             <Text style={styles.rowLabel}>Theme</Text>
             <View style={styles.themeToggle}>
               {themeOptions.map((opt) => (
@@ -60,6 +68,22 @@ export default function Profile() {
                   onPress={() => setPreference(opt.value)}
                 >
                   <Text style={[styles.themePillText, preference === opt.value && styles.themePillTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={styles.themeRow}>
+            <Text style={styles.rowLabel}>Currency</Text>
+            <View style={styles.themeToggle}>
+              {currencyOptions.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.themePill, currency === opt.value && styles.themePillActive]}
+                  onPress={() => setCurrency(opt.value)}
+                >
+                  <Text style={[styles.themePillText, currency === opt.value && styles.themePillTextActive]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>

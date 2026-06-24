@@ -8,6 +8,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/auth';
 import { useTheme } from '../../context/theme';
+import { useCurrency } from '../../context/currency';
 import type { ColorScheme } from '../../constants/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -47,6 +48,7 @@ export default function ItemDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const { colors } = useTheme();
+  const { formatPrice } = useCurrency();
   const styles = makeStyles(colors);
 
   const [item, setItem] = useState<Item | null>(null);
@@ -241,7 +243,7 @@ export default function ItemDetail() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryMain}>
               <Text style={styles.estLabel}>EST. VALUE</Text>
-              <Text style={styles.estValue}>${Number(summary.est_value).toLocaleString(undefined, { maximumFractionDigits: 0 })}</Text>
+              <Text style={styles.estValue}>{formatPrice(summary.est_value)}</Text>
             </View>
             <View style={styles.summaryStats}>
               <View style={styles.stat}>
@@ -250,11 +252,11 @@ export default function ItemDetail() {
               </View>
               <View style={styles.stat}>
                 <Text style={styles.statLabel}>LOW</Text>
-                <Text style={styles.statValue}>${Number(summary.price_low).toLocaleString(undefined, { maximumFractionDigits: 0 })}</Text>
+                <Text style={styles.statValue}>{formatPrice(summary.price_low)}</Text>
               </View>
               <View style={styles.stat}>
                 <Text style={styles.statLabel}>HIGH</Text>
-                <Text style={styles.statValue}>${Number(summary.price_high).toLocaleString(undefined, { maximumFractionDigits: 0 })}</Text>
+                <Text style={styles.statValue}>{formatPrice(summary.price_high)}</Text>
               </View>
             </View>
           </View>
