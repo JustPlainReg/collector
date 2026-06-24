@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(nvm version)",
+      "PowerShell(nvm list)"
+    ]
+  }
+}
