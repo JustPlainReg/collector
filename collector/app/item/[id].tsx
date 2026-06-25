@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity,
   ActivityIndicator, Dimensions, Modal, TextInput, Alert, Image,
+  KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { LineChart } from 'react-native-chart-kit';
@@ -105,6 +106,7 @@ export default function ItemDetail() {
     checkOwnership();
     loadAlert();
   }, [selectedVariant, loading]);
+
 
   async function checkOwnership() {
     if (!session) return;
@@ -384,6 +386,7 @@ export default function ItemDetail() {
 
       {/* Add to Portfolio Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Add to Portfolio</Text>
@@ -410,10 +413,12 @@ export default function ItemDetail() {
             </TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Price Alert Modal */}
-      <Modal visible={alertModalVisible} transparent animationType="slide" onRequestClose={() => setAlertModalVisible(false)}>
+      <Modal visible={alertModalVisible} transparent animationType="slide" onRequestClose={() => { Keyboard.dismiss(); setAlertModalVisible(false); }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Price Alert</Text>
@@ -465,11 +470,12 @@ export default function ItemDetail() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setAlertModalVisible(false)}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => { Keyboard.dismiss(); setAlertModalVisible(false); }}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

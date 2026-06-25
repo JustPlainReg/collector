@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "collector",
-    "slug": "collector",
-    "scheme": "collector",
+    "name": "Mantle",
+    "slug": "mantle",
+    "scheme": "mantle",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.collector"
+      "package": "com.reggiegeorges.mantle"
     },
     "web": {
       "favicon": "./assets/favicon.png"

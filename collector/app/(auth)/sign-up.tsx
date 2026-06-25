@@ -41,7 +41,7 @@ export default function SignUp() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Collector</Text>
+      <Text style={styles.title}>Mantle</Text>
       <Text style={styles.subtitle}>Create an account</Text>
 
       <TextInput

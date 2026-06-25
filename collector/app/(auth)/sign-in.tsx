@@ -25,7 +25,7 @@ export default function SignIn() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Collector</Text>
+      <Text style={styles.title}>Mantle</Text>
       <Text style={styles.subtitle}>Sign in to your account</Text>
 
       <TextInput

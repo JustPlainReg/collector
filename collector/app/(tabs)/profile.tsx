@@ -105,7 +105,7 @@ export default function Profile() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ABOUT</Text>
         <View style={styles.card}>
-          <Row label="App" value="Collector" colors={colors} />
+          <Row label="App" value="Mantle" colors={colors} />
           <Row label="Version" value="1.0.1" colors={colors} last />
         </View>
       </View>

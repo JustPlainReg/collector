@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   StyleSheet, Text, View, TextInput,
-  FlatList, TouchableOpacity, ActivityIndicator,
+  FlatList, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
@@ -18,7 +18,17 @@ type Item = {
   id: string;
   name: string;
   brand: string | null;
+  image_url: string | null;
   categories: { name: string }[] | null;
+};
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  'pokemon-cards': '🃏',
+  'sports-cards': '⚾',
+  'sneakers': '👟',
+  'video-games': '🎮',
+  'figures-toys': '🤖',
+  'comics': '📚',
 };
 
 export default function Search() {
@@ -45,7 +55,7 @@ export default function Search() {
     setLoading(true);
     supabase
       .from('items')
-      .select('id, name, brand, categories(name)')
+      .select('id, name, brand, image_url, categories(name)')
       .eq('category_id', selectedCategory.id)
       .order('name')
       .limit(50)
@@ -65,7 +75,7 @@ export default function Search() {
       setLoading(true);
       let q = supabase
         .from('items')
-        .select('id, name, brand, categories(name)')
+        .select('id, name, brand, image_url, categories(name)')
         .ilike('name', `%${query}%`)
         .limit(30);
 
@@ -95,6 +105,11 @@ export default function Search() {
 
   const showCategories = !selectedCategory && !query.trim();
 
+  // Pad to even count so the grid is always balanced
+  const categoryData = categories.length % 2 !== 0
+    ? [...categories, { id: '__spacer__', name: '', slug: '' }]
+    : categories;
+
   return (
     <View style={styles.container}>
       {selectedCategory && (
@@ -122,16 +137,23 @@ export default function Search() {
         <>
           <Text style={styles.sectionLabel}>Browse by Category</Text>
           <FlatList
-            data={categories}
+            data={categoryData}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.categoryCard}
-                onPress={() => handleSelectCategory(item)}
-              >
-                <Text style={styles.categoryName}>{item.name}</Text>
-              </TouchableOpacity>
-            )}
+            renderItem={({ item }) => {
+              if (item.id === '__spacer__') {
+                return <View style={[styles.categoryCard, styles.categoryCardSpacer]} />;
+              }
+              const emoji = CATEGORY_EMOJI[item.slug] ?? '📦';
+              return (
+                <TouchableOpacity
+                  style={styles.categoryCard}
+                  onPress={() => handleSelectCategory(item)}
+                >
+                  <Text style={styles.categoryEmoji}>{emoji}</Text>
+                  <Text style={styles.categoryName}>{item.name}</Text>
+                </TouchableOpacity>
+              );
+            }}
             numColumns={2}
             columnWrapperStyle={styles.row}
             contentContainerStyle={styles.grid}
@@ -157,12 +179,19 @@ export default function Search() {
               style={styles.resultRow}
               onPress={() => router.push(`/item/${item.id}`)}
             >
-              <Text style={styles.resultName}>{item.name}</Text>
-              <Text style={styles.resultMeta}>
-                {item.brand ?? ''}
-                {item.brand && item.categories?.[0]?.name ? '  ·  ' : ''}
-                {item.categories?.[0]?.name ?? ''}
-              </Text>
+              {item.image_url ? (
+                <Image source={{ uri: item.image_url }} style={styles.resultImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.resultImagePlaceholder} />
+              )}
+              <View style={styles.resultInfo}>
+                <Text style={styles.resultName} numberOfLines={2}>{item.name}</Text>
+                <Text style={styles.resultMeta}>
+                  {item.brand ?? ''}
+                  {item.brand && item.categories?.[0]?.name ? '  ·  ' : ''}
+                  {item.categories?.[0]?.name ?? ''}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.list}
@@ -223,12 +252,40 @@ function makeStyles(c: ColorScheme) {
       padding: 20,
       alignItems: 'center',
       justifyContent: 'center',
+      minHeight: 90,
     },
-    categoryName: { color: c.text, fontSize: 15, fontWeight: '600', textAlign: 'center' },
+    categoryCardSpacer: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+    },
+    categoryEmoji: { fontSize: 28, marginBottom: 8 },
+    categoryName: { color: c.text, fontSize: 14, fontWeight: '600', textAlign: 'center' },
     list: { paddingHorizontal: 16 },
-    resultRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border },
-    resultName: { color: c.text, fontSize: 15, fontWeight: '500' },
-    resultMeta: { color: c.subtext, fontSize: 13, marginTop: 3 },
+    resultRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+      gap: 12,
+    },
+    resultImage: {
+      width: 52,
+      height: 52,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+    },
+    resultImagePlaceholder: {
+      width: 52,
+      height: 52,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    resultInfo: { flex: 1 },
+    resultName: { color: c.text, fontSize: 15, fontWeight: '500', marginBottom: 3 },
+    resultMeta: { color: c.subtext, fontSize: 13 },
     spinner: { marginTop: 40 },
     empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: 32 },
     emptyText: { color: c.text, fontSize: 16, fontWeight: '600', marginBottom: 8 },
