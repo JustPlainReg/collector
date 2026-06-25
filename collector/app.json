@@ -25,7 +25,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-dev-client"
+      "expo-dev-client",
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#06b6d4" }]
     ],
     "extra": {
       "router": {},

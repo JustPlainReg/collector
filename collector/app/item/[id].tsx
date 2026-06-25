@@ -40,6 +40,12 @@ type PriceSummary = {
   price_high: number;
 };
 
+type PriceAlert = {
+  id: string;
+  target_price: number;
+  direction: 'above' | 'below';
+};
+
 function variantLabel(v: Variant): string {
   return v.grader ? `${v.grader} ${v.variant_value}` : v.variant_value;
 }
@@ -63,6 +69,12 @@ export default function ItemDetail() {
   const [modalVisible, setModalVisible] = useState(false);
   const [purchasePrice, setPurchasePrice] = useState('');
   const [adding, setAdding] = useState(false);
+
+  const [existingAlert, setExistingAlert] = useState<PriceAlert | null>(null);
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [alertTargetPrice, setAlertTargetPrice] = useState('');
+  const [alertDirection, setAlertDirection] = useState<'above' | 'below'>('below');
+  const [savingAlert, setSavingAlert] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -91,6 +103,7 @@ export default function ItemDetail() {
     if (loading) return;
     loadPrices();
     checkOwnership();
+    loadAlert();
   }, [selectedVariant, loading]);
 
   async function checkOwnership() {
@@ -104,6 +117,20 @@ export default function ItemDetail() {
     else q = q.is('variant_id', null);
     const { data } = await q.limit(1);
     setAlreadyOwned((data ?? []).length > 0);
+  }
+
+  async function loadAlert() {
+    if (!session) return;
+    let q = supabase
+      .from('price_alerts')
+      .select('id, target_price, direction')
+      .eq('user_id', session.user.id)
+      .eq('item_id', id)
+      .eq('triggered', false);
+    if (selectedVariant) q = q.eq('variant_id', selectedVariant.id);
+    else q = q.is('variant_id', null);
+    const { data } = await q.limit(1);
+    setExistingAlert((data?.[0] as PriceAlert) ?? null);
   }
 
   async function loadPrices() {
@@ -166,6 +193,50 @@ export default function ItemDetail() {
       const label = selectedVariant ? ` (${variantLabel(selectedVariant)})` : '';
       Alert.alert('Added!', `${item?.name}${label} added to your portfolio.`);
     }
+  };
+
+  const handleSaveAlert = async () => {
+    if (!session || !alertTargetPrice) return;
+    setSavingAlert(true);
+
+    if (existingAlert) {
+      await supabase.from('price_alerts').delete().eq('id', existingAlert.id);
+    }
+
+    const { error } = await supabase.from('price_alerts').insert({
+      user_id: session.user.id,
+      item_id: id,
+      variant_id: selectedVariant?.id ?? null,
+      target_price: parseFloat(alertTargetPrice),
+      direction: alertDirection,
+    });
+
+    setSavingAlert(false);
+    setAlertModalVisible(false);
+
+    if (!error) {
+      await loadAlert();
+      const word = alertDirection === 'above' ? 'rises above' : 'drops below';
+      Alert.alert('Alert Set!', `We'll notify you when the price ${word} $${alertTargetPrice}.`);
+    }
+  };
+
+  const handleRemoveAlert = async () => {
+    if (!existingAlert) return;
+    await supabase.from('price_alerts').delete().eq('id', existingAlert.id);
+    setExistingAlert(null);
+    setAlertModalVisible(false);
+  };
+
+  const openAlertModal = () => {
+    if (existingAlert) {
+      setAlertTargetPrice(String(existingAlert.target_price));
+      setAlertDirection(existingAlert.direction);
+    } else {
+      setAlertTargetPrice('');
+      setAlertDirection(summary && summary.est_value > 0 ? 'below' : 'above');
+    }
+    setAlertModalVisible(true);
   };
 
   if (loading) {
@@ -301,8 +372,17 @@ export default function ItemDetail() {
               : `+ Add${selectedVariant ? ` ${variantLabel(selectedVariant)}` : ''} to Portfolio`}
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.alertButton} onPress={openAlertModal}>
+          <Text style={styles.alertButtonText}>
+            {existingAlert
+              ? `🔔 Alert: ${existingAlert.direction === 'above' ? '↑' : '↓'} $${Number(existingAlert.target_price).toLocaleString()}`
+              : '🔔 Set Price Alert'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
+      {/* Add to Portfolio Modal */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
@@ -326,6 +406,66 @@ export default function ItemDetail() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Price Alert Modal */}
+      <Modal visible={alertModalVisible} transparent animationType="slide" onRequestClose={() => setAlertModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Price Alert</Text>
+            <Text style={styles.modalSubtitle}>
+              {item.name}{selectedVariant ? ` · ${variantLabel(selectedVariant)}` : ''}
+            </Text>
+
+            <Text style={styles.inputLabel}>NOTIFY ME WHEN PRICE GOES</Text>
+            <View style={styles.directionToggle}>
+              <TouchableOpacity
+                style={[styles.directionPill, alertDirection === 'above' && styles.directionPillActive]}
+                onPress={() => setAlertDirection('above')}
+              >
+                <Text style={[styles.directionPillText, alertDirection === 'above' && styles.directionPillTextActive]}>
+                  Above ↑
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.directionPill, alertDirection === 'below' && styles.directionPillActive]}
+                onPress={() => setAlertDirection('below')}
+              >
+                <Text style={[styles.directionPillText, alertDirection === 'below' && styles.directionPillTextActive]}>
+                  Below ↓
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>TARGET PRICE (USD)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. 500"
+              placeholderTextColor={colors.subtext}
+              value={alertTargetPrice}
+              onChangeText={setAlertTargetPrice}
+              keyboardType="decimal-pad"
+            />
+
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleSaveAlert}
+              disabled={savingAlert || !alertTargetPrice}
+            >
+              <Text style={styles.confirmButtonText}>{savingAlert ? 'Saving...' : 'Set Alert'}</Text>
+            </TouchableOpacity>
+
+            {existingAlert && (
+              <TouchableOpacity style={styles.removeAlertButton} onPress={handleRemoveAlert}>
+                <Text style={styles.removeAlertText}>Remove Alert</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setAlertModalVisible(false)}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -366,6 +506,8 @@ function makeStyles(c: ColorScheme) {
     addButton: { backgroundColor: c.accent, borderRadius: 10, padding: 16, alignItems: 'center' },
     addButtonOwned: { backgroundColor: c.accentDark },
     addButtonText: { color: c.background, fontSize: 16, fontWeight: '700' },
+    alertButton: { borderWidth: 1, borderColor: c.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 12 },
+    alertButtonText: { color: c.accent, fontSize: 15, fontWeight: '600' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
     modalSheet: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
     modalTitle: { color: c.text, fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
@@ -376,5 +518,12 @@ function makeStyles(c: ColorScheme) {
     confirmButtonText: { color: c.background, fontSize: 16, fontWeight: '700' },
     cancelButton: { alignItems: 'center', padding: 12 },
     cancelButtonText: { color: c.subtext, fontSize: 15 },
+    directionToggle: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+    directionPill: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: c.border, alignItems: 'center' },
+    directionPillActive: { backgroundColor: c.accent, borderColor: c.accent },
+    directionPillText: { color: c.subtext, fontSize: 14, fontWeight: '600' },
+    directionPillTextActive: { color: '#ffffff' },
+    removeAlertButton: { alignItems: 'center', padding: 12, marginBottom: 4 },
+    removeAlertText: { color: c.negative, fontSize: 15 },
   });
 }

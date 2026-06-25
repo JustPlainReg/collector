@@ -3,10 +3,12 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/auth';
 import { ThemeProvider, useTheme } from '../context/theme';
 import { CurrencyProvider } from '../context/currency';
+import { useNotifications } from '../hooks/useNotifications';
 
 function RootLayoutNav() {
   const { session, loading } = useAuth();
   const { colors } = useTheme();
+  useNotifications();
   const segments = useSegments();
   const router = useRouter();
 
