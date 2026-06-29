@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Mantle",
-    "slug": "mantle",
+    "slug": "collector",
     "scheme": "mantle",
     "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/mantle-app.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -13,7 +13,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
+        "foregroundImage": "./assets/mantle-app.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
@@ -26,7 +26,7 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#06b6d4" }]
+      ["expo-notifications", { "icon": "./assets/mantle-app.png", "color": "#06b6d4" }]
     ],
     "extra": {
       "router": {},
