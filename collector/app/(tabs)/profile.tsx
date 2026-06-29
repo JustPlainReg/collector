@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/auth';
 import { useTheme, ThemePreference } from '../../context/theme';
 import { useCurrency, Currency } from '../../context/currency';
@@ -11,6 +12,28 @@ export default function Profile() {
   const { currency, setCurrency } = useCurrency();
   const styles = makeStyles(colors);
   const [signingOut, setSigningOut] = useState(false);
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all portfolio data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.rpc('delete_user');
+            if (error) {
+              Alert.alert('Error', 'Could not delete account. Please contact regislabs424@gmail.com.');
+            } else {
+              await supabase.auth.signOut();
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -114,6 +137,11 @@ export default function Profile() {
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} disabled={signingOut}>
         <Text style={styles.signOutText}>{signingOut ? 'Signing out...' : 'Sign Out'}</Text>
       </TouchableOpacity>
+
+      {/* Delete account */}
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Text style={styles.deleteText}>Delete Account</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -176,5 +204,7 @@ function makeStyles(c: ColorScheme) {
       marginTop: 8,
     },
     signOutText: { color: c.negative, fontSize: 16, fontWeight: '600' },
+    deleteButton: { alignItems: 'center', padding: 16, marginTop: 8 },
+    deleteText: { color: c.subtext, fontSize: 14 },
   });
 }
