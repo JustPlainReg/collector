@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/theme';
+import { useCurrency } from '../../context/currency';
 import type { ColorScheme } from '../../constants/theme';
 
 type Category = {
@@ -22,6 +23,15 @@ type Item = {
   categories: { name: string }[] | null;
 };
 
+type SortOption = 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'name_asc', label: 'A–Z' },
+  { value: 'name_desc', label: 'Z–A' },
+  { value: 'price_asc', label: '$ Low' },
+  { value: 'price_desc', label: '$ High' },
+];
+
 const CATEGORY_EMOJI: Record<string, string> = {
   'pokemon-cards': '🃏',
   'sports-cards': '⚾',
@@ -34,13 +44,16 @@ const CATEGORY_EMOJI: Record<string, string> = {
 export default function Search() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { formatPrice } = useCurrency();
   const styles = makeStyles(colors);
 
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [results, setResults] = useState<Item[]>([]);
+  const [priceMap, setPriceMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('name_asc');
 
   useEffect(() => {
     supabase
@@ -59,8 +72,10 @@ export default function Search() {
       .eq('category_id', selectedCategory.id)
       .order('name')
       .limit(50)
-      .then(({ data }) => {
-        setResults((data as Item[]) ?? []);
+      .then(async ({ data }) => {
+        const items = (data as Item[]) ?? [];
+        setResults(items);
+        await fetchPrices(items);
         setLoading(false);
       });
   }, [selectedCategory]);
@@ -75,7 +90,6 @@ export default function Search() {
       setLoading(true);
 
       const words = query.trim().split(/\s+/).filter((w) => w.length > 0);
-
       let q = supabase
         .from('items')
         .select('id, name, brand, image_url, categories(name)');
@@ -89,28 +103,54 @@ export default function Search() {
       }
 
       const { data } = await q.limit(30);
-      setResults((data as Item[]) ?? []);
+      const items = (data as Item[]) ?? [];
+      setResults(items);
+      await fetchPrices(items);
       setLoading(false);
     }, 400);
 
     return () => clearTimeout(timer);
   }, [query, selectedCategory]);
 
+  async function fetchPrices(items: Item[]) {
+    if (items.length === 0) { setPriceMap({}); return; }
+    const ids = items.map((i) => i.id);
+    const { data } = await supabase
+      .from('current_prices')
+      .select('item_id, est_value')
+      .in('item_id', ids);
+    const map: Record<string, number> = {};
+    (data ?? []).forEach((p: any) => {
+      if (!map[p.item_id]) map[p.item_id] = Number(p.est_value);
+    });
+    setPriceMap(map);
+  }
+
   const handleSelectCategory = (cat: Category) => {
     setSelectedCategory(cat);
     setQuery('');
     setResults([]);
+    setPriceMap({});
   };
 
   const handleClearCategory = () => {
     setSelectedCategory(null);
     setQuery('');
     setResults([]);
+    setPriceMap({});
   };
 
-  const showCategories = !selectedCategory && !query.trim();
+  const sortedResults = [...results].sort((a, b) => {
+    if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+    if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+    if (sortBy === 'price_asc') return (priceMap[a.id] ?? 0) - (priceMap[b.id] ?? 0);
+    if (sortBy === 'price_desc') return (priceMap[b.id] ?? 0) - (priceMap[a.id] ?? 0);
+    return 0;
+  });
 
-  // Pad to even count so the grid is always balanced
+  const showCategories = !selectedCategory && !query.trim();
+  const showResults = !showCategories && !loading && results.length > 0;
+
   const categoryData = categories.length % 2 !== 0
     ? [...categories, { id: '__spacer__', name: '', slug: '' }]
     : categories;
@@ -137,6 +177,22 @@ export default function Search() {
         autoCapitalize="none"
         clearButtonMode="while-editing"
       />
+
+      {showResults && (
+        <View style={styles.sortRow}>
+          {SORT_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.sortPill, sortBy === opt.value && styles.sortPillActive]}
+              onPress={() => setSortBy(opt.value)}
+            >
+              <Text style={[styles.sortPillText, sortBy === opt.value && styles.sortPillTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {showCategories ? (
         <>
@@ -177,7 +233,7 @@ export default function Search() {
         </View>
       ) : (
         <FlatList
-          data={results}
+          data={sortedResults}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -197,6 +253,9 @@ export default function Search() {
                   {item.categories?.[0]?.name ?? ''}
                 </Text>
               </View>
+              {priceMap[item.id] != null && (
+                <Text style={styles.resultPrice}>{formatPrice(priceMap[item.id])}</Text>
+              )}
             </TouchableOpacity>
           )}
           contentContainerStyle={styles.list}
@@ -235,8 +294,25 @@ function makeStyles(c: ColorScheme) {
       borderRadius: 8,
       padding: 12,
       fontSize: 16,
-      marginBottom: 16,
+      marginBottom: 12,
     },
+    sortRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 16,
+      marginBottom: 12,
+    },
+    sortPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surface,
+    },
+    sortPillActive: { backgroundColor: c.accent, borderColor: c.accent },
+    sortPillText: { color: c.subtext, fontSize: 13, fontWeight: '600' },
+    sortPillTextActive: { color: '#ffffff' },
     sectionLabel: {
       color: c.subtext,
       fontSize: 12,
@@ -291,6 +367,7 @@ function makeStyles(c: ColorScheme) {
     resultInfo: { flex: 1 },
     resultName: { color: c.text, fontSize: 15, fontWeight: '500', marginBottom: 3 },
     resultMeta: { color: c.subtext, fontSize: 13 },
+    resultPrice: { color: c.text, fontSize: 14, fontWeight: '700' },
     spinner: { marginTop: 40 },
     empty: { alignItems: 'center', marginTop: 60, paddingHorizontal: 32 },
     emptyText: { color: c.text, fontSize: 16, fontWeight: '600', marginBottom: 8 },
