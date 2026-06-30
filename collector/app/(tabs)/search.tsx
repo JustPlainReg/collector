@@ -73,17 +73,22 @@ export default function Search() {
 
     const timer = setTimeout(async () => {
       setLoading(true);
+
+      const words = query.trim().split(/\s+/).filter((w) => w.length > 0);
+
       let q = supabase
         .from('items')
-        .select('id, name, brand, image_url, categories(name)')
-        .ilike('name', `%${query}%`)
-        .limit(30);
+        .select('id, name, brand, image_url, categories(name)');
+
+      for (const word of words) {
+        q = q.ilike('name', `%${word}%`);
+      }
 
       if (selectedCategory) {
         q = q.eq('category_id', selectedCategory.id);
       }
 
-      const { data } = await q;
+      const { data } = await q.limit(30);
       setResults((data as Item[]) ?? []);
       setLoading(false);
     }, 400);
