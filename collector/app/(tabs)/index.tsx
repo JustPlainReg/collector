@@ -1,11 +1,25 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/auth';
 import { useTheme } from '../../context/theme';
 import { useCurrency } from '../../context/currency';
 import type { ColorScheme } from '../../constants/theme';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+type Period = '1H' | '1D' | '3D' | '7D';
+
+const PERIODS: Period[] = ['1H', '1D', '3D', '7D'];
+
+const PERIOD_MS: Record<Period, number> = {
+  '1H': 60 * 60 * 1000,
+  '1D': 24 * 60 * 60 * 1000,
+  '3D': 3 * 24 * 60 * 60 * 1000,
+  '7D': 7 * 24 * 60 * 60 * 1000,
+};
 
 type PortfolioItem = {
   id: string;
@@ -24,6 +38,11 @@ type CurrentPrice = {
   est_value: number;
 };
 
+type Snapshot = {
+  snapshot_at: string;
+  total_value: number;
+};
+
 export default function Portfolio() {
   const { session } = useAuth();
   const { colors } = useTheme();
@@ -33,6 +52,8 @@ export default function Portfolio() {
 
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
+  const [allSnapshots, setAllSnapshots] = useState<Snapshot[]>([]);
+  const [period, setPeriod] = useState<Period>('1D');
   const [loading, setLoading] = useState(true);
 
   const loadPortfolio = useCallback(async () => {
@@ -67,6 +88,15 @@ export default function Portfolio() {
       setCurrentPrices(priceMap);
     }
 
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: snapshotData } = await supabase
+      .from('portfolio_snapshots')
+      .select('snapshot_at, total_value')
+      .eq('user_id', session.user.id)
+      .gte('snapshot_at', sevenDaysAgo)
+      .order('snapshot_at', { ascending: true });
+
+    setAllSnapshots((snapshotData ?? []) as Snapshot[]);
     setLoading(false);
   }, [session]);
 
@@ -80,6 +110,22 @@ export default function Portfolio() {
     const price = currentPrices[p.items.id] ?? 0;
     return sum + price * p.quantity;
   }, 0);
+
+  const snapshots = allSnapshots.filter(
+    (s) => new Date(s.snapshot_at).getTime() >= Date.now() - PERIOD_MS[period]
+  );
+
+  const hasChart = snapshots.length >= 2;
+  const chartValues = hasChart ? snapshots.map((s) => Number(s.total_value)) : [];
+  const isPositive = hasChart
+    ? snapshots[snapshots.length - 1].total_value >= snapshots[0].total_value
+    : true;
+  const changePercent = hasChart
+    ? ((snapshots[snapshots.length - 1].total_value - snapshots[0].total_value) /
+        Math.max(snapshots[0].total_value, 0.01)) *
+      100
+    : null;
+  const lineColor = isPositive ? colors.positive : colors.negative;
 
   const handleRemove = (portfolioItemId: string, itemName: string) => {
     Alert.alert(
@@ -139,7 +185,56 @@ export default function Portfolio() {
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>PORTFOLIO VALUE</Text>
         <Text style={styles.heroValue}>{formatPrice(totalValue)}</Text>
+        {changePercent !== null && (
+          <Text style={[styles.heroChange, { color: lineColor }]}>
+            {isPositive ? '▲' : '▼'} {isPositive ? '+' : ''}{changePercent.toFixed(1)}%{' '}
+            <Text style={styles.heroChangePeriod}>({period.toLowerCase()})</Text>
+          </Text>
+        )}
       </View>
+
+      {hasChart && (
+        <LineChart
+          data={{ labels: chartValues.map(() => ''), datasets: [{ data: chartValues }] }}
+          width={SCREEN_WIDTH}
+          height={140}
+          chartConfig={{
+            backgroundGradientFrom: colors.background,
+            backgroundGradientTo: colors.background,
+            backgroundGradientFromOpacity: 1,
+            backgroundGradientToOpacity: 1,
+            color: () => lineColor,
+            fillShadowGradient: lineColor,
+            fillShadowGradientOpacity: 0.15,
+            strokeWidth: 2,
+            decimalPlaces: 0,
+            propsForBackgroundLines: { stroke: 'transparent' },
+          }}
+          bezier
+          withDots={false}
+          withInnerLines={false}
+          withOuterLines={false}
+          withVerticalLabels={false}
+          withHorizontalLabels={false}
+          style={styles.chart}
+        />
+      )}
+
+      {allSnapshots.length >= 2 && (
+        <View style={styles.periodRow}>
+          {PERIODS.map((p) => (
+            <TouchableOpacity
+              key={p}
+              style={[styles.periodBtn, period === p && styles.periodBtnActive]}
+              onPress={() => setPeriod(p)}
+            >
+              <Text style={[styles.periodText, period === p && { color: lineColor }]}>{p}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <View style={styles.divider} />
 
       {portfolioItems.length === 0 ? (
         <View style={styles.empty}>
@@ -168,9 +263,27 @@ function makeStyles(c: ColorScheme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background },
-    hero: { padding: 24, paddingTop: 32, borderBottomWidth: 1, borderBottomColor: c.border },
+    hero: { padding: 24, paddingTop: 32 },
     heroLabel: { color: c.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1.5, marginBottom: 6 },
     heroValue: { color: c.text, fontSize: 40, fontWeight: 'bold' },
+    heroChange: { fontSize: 14, fontWeight: '600', marginTop: 6 },
+    heroChangePeriod: { color: c.subtext, fontWeight: '400' },
+    chart: { marginLeft: -16, marginTop: 8 },
+    periodRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+    },
+    periodBtn: {
+      paddingHorizontal: 18,
+      paddingVertical: 6,
+      borderRadius: 16,
+    },
+    periodBtnActive: { backgroundColor: c.surface },
+    periodText: { color: c.subtext, fontSize: 13, fontWeight: '600' },
+    divider: { height: 1, backgroundColor: c.border },
     list: { paddingHorizontal: 16, paddingTop: 8 },
     itemRow: {
       flexDirection: 'row',
