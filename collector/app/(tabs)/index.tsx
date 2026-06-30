@@ -147,7 +147,8 @@ export default function Portfolio() {
 
   const renderItem = ({ item }: { item: PortfolioItem }) => {
     const estValue = currentPrices[item.items.id];
-    const gain = item.purchase_price && estValue ? estValue - item.purchase_price : null;
+    const gain = item.purchase_price != null && estValue ? estValue - item.purchase_price : null;
+    const gainPct = gain !== null && item.purchase_price ? (gain / item.purchase_price) * 100 : null;
 
     return (
       <TouchableOpacity
@@ -162,9 +163,9 @@ export default function Portfolio() {
         </View>
         <View style={styles.itemPricing}>
           <Text style={styles.itemValue}>{formatPrice(estValue)}</Text>
-          {gain !== null && (
+          {gain !== null && gainPct !== null && (
             <Text style={[styles.itemGain, { color: gain >= 0 ? colors.positive : colors.negative }]}>
-              {gain >= 0 ? '+' : ''}{formatPrice(Math.abs(gain))}
+              {gain >= 0 ? '+' : '-'}{formatPrice(Math.abs(gain))} ({gainPct >= 0 ? '+' : '-'}{Math.abs(gainPct).toFixed(1)}%)
             </Text>
           )}
         </View>
