@@ -257,6 +257,8 @@ export default function ItemDetail() {
     );
   }
 
+  const lastSoldAt = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1].sold_at : null;
+
   const chartData = priceHistory.map((p) => p.sold_price);
   const uniqueDates = new Set(priceHistory.map((p) => p.sold_at.slice(0, 10)));
   const hasRealHistory = uniqueDates.size > 1;
@@ -332,6 +334,9 @@ export default function ItemDetail() {
                 <Text style={styles.statValue}>{formatPrice(summary.price_high)}</Text>
               </View>
             </View>
+            {lastSoldAt && (
+              <Text style={styles.lastSold}>Last updated · {formatLastSold(lastSoldAt)}</Text>
+            )}
           </View>
         ) : (
           <View style={styles.summaryCard}>
@@ -481,6 +486,15 @@ export default function ItemDetail() {
   );
 }
 
+function formatLastSold(dateStr: string): string {
+  const date = new Date(dateStr);
+  const diffDays = Math.floor((Date.now() - date.getTime()) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
@@ -506,6 +520,7 @@ function makeStyles(c: ColorScheme) {
     statLabel: { color: c.subtext, fontSize: 11, fontWeight: '600', letterSpacing: 1, marginBottom: 4 },
     statValue: { color: c.text, fontSize: 16, fontWeight: '600' },
     noData: { color: c.subtext, fontSize: 14, textAlign: 'center', paddingVertical: 8 },
+    lastSold: { color: c.subtext, fontSize: 12, marginTop: 12 },
     chartSection: { marginBottom: 24 },
     sectionTitle: { color: c.text, fontSize: 16, fontWeight: '600', marginBottom: 12 },
     chart: { borderRadius: 12 },
